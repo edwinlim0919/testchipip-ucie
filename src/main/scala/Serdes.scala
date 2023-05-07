@@ -515,6 +515,13 @@ class TLSerdes(w: Int, params: Seq[TLManagerParameters], beatBytes: Int = 8, has
         managers = Seq(manager),
         beatBytes = beatBytes)))
 
+  //val (tl, edge) = node.in(0)
+  //when (tl.a.fire()) {
+  //  printf("MANAGERTL A\n")
+  //  printf("source: %d\n", tl.a.bits.source)
+  //  printf("data: %d\n", tl.a.bits.data)
+  //}
+
   lazy val module = new Impl
   class Impl extends LazyModuleImp(this) {
     val nChannels = params.size
@@ -526,6 +533,13 @@ class TLSerdes(w: Int, params: Seq[TLManagerParameters], beatBytes: Int = 8, has
 
     node.in.zip(io.ser).zipWithIndex.foreach { case (((tl, edge), ser), i) =>
       val mergeType = new TLMergedBundle(tl.params, hasCorruptDenied)
+
+      when (tl.a.fire()) {
+        printf("MANAGERTL A\n")
+        printf("source: %d\n", tl.a.bits.source)
+        printf("address: %d\n", tl.a.bits.address)
+        printf("data: %d\n\n", tl.a.bits.data)
+      }
 
       val outChannels = Seq(tl.e, tl.c, tl.a).map(TLMergedBundle(_, hasCorruptDenied)(edge))
       val outArb = Module(new HellaPeekingArbiter(
@@ -554,7 +568,7 @@ class TLDesser(w: Int, params: Seq[TLClientParameters], hasCorruptDenied: Boolea
     (implicit p: Parameters) extends LazyModule {
 
   val node = TLClientNode(params.map(client =>
-      TLMasterPortParameters.v1(Seq(client))))
+      TLMasterPortParameters.v2(Seq(client))))
 
   lazy val module = new Impl
   class Impl extends LazyModuleImp(this) {
@@ -646,3 +660,54 @@ class TLSerdesser(
       TLMergedBundle.TL_CHAN_ID_E -> client_tl.e.ready))
   }
 }
+
+
+//val clientNode = TLClientNode(Seq(clientPortParams))
+//val managerNode = TLManagerNode(Seq(managerPortParams))
+//val (client_tl, client_edge) = clientNode.out(0)
+//val (manager_tl, manager_edge) = managerNode.in(0)
+//val clientParams = client_edge.bundle
+//val managerParams = manager_edge.bundle
+//val mergedParams = clientParams.union(managerParams)
+//val mergeType = new TLMergedBundle(mergedParams, hasCorruptDenied)
+//
+//
+//class Serdesser(
+//  w: Int,
+//  (implicit p: Parameters) extends LazyModule {
+//  lazy val module = new Impl
+//  class Impl extends LazyModuleImp(this) {
+//    val io = IO(new Bundle {
+//      val ser = new SerialIO(w)
+//    })
+//
+//    val outChannels = Seq(
+//      manager_tl.e, client_tl.d, manager_tl.c, client_tl.b, manager_tl.a)
+//    val outArb = Module(new HellaPeekingArbiter(
+//      mergeType, outChannels.size, (b: TLMergedBundle) => b.last))
+//    val outSer = Module(new GenericSerializer(mergeType, w))
+//    outArb.io.in <> outChannels.map(TLMergedBundle(_, mergedParams, hasCorruptDenied)(client_edge))
+//    outSer.io.in <> outArb.io.out
+//    io.ser.out <> outSer.io.out
+//
+//    val inDes = Module(new GenericDeserializer(mergeType, w))
+//    inDes.io.in <> io.ser.in
+//    client_tl.a.valid := inDes.io.out.valid && inDes.io.out.bits.isA()
+//    client_tl.a.bits := TLMergedBundle.toA(inDes.io.out.bits, clientParams, hasCorruptDenied)
+//    manager_tl.b.valid := inDes.io.out.valid && inDes.io.out.bits.isB()
+//    manager_tl.b.bits := TLMergedBundle.toB(inDes.io.out.bits, managerParams, hasCorruptDenied)
+//    client_tl.c.valid := inDes.io.out.valid && inDes.io.out.bits.isC()
+//    client_tl.c.bits := TLMergedBundle.toC(inDes.io.out.bits, clientParams, hasCorruptDenied)
+//    manager_tl.d.valid := inDes.io.out.valid && inDes.io.out.bits.isD()
+//    manager_tl.d.bits := TLMergedBundle.toD(inDes.io.out.bits, managerParams, hasCorruptDenied)
+//    client_tl.e.valid := inDes.io.out.valid && inDes.io.out.bits.isE()
+//    client_tl.e.bits := TLMergedBundle.toE(inDes.io.out.bits, clientParams, hasCorruptDenied)
+//    inDes.io.out.ready := MuxLookup(inDes.io.out.bits.chanId, false.B, Seq(
+//      TLMergedBundle.TL_CHAN_ID_A -> client_tl.a.ready,
+//      TLMergedBundle.TL_CHAN_ID_B -> manager_tl.b.ready,
+//      TLMergedBundle.TL_CHAN_ID_C -> client_tl.c.ready,
+//      TLMergedBundle.TL_CHAN_ID_D -> manager_tl.d.ready,
+//      TLMergedBundle.TL_CHAN_ID_E -> client_tl.e.ready))
+//  }
+//}
+

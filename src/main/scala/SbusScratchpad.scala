@@ -27,8 +27,8 @@ trait CanHaveBackingSbusScratchpad { this: BaseSubsystem =>
   }
 }
 
-class WithBackingSbusScratchpad(base: BigInt = 0x10000,
-                                mask: BigInt = 0xffff,
+class WithBackingSbusScratchpad(base: BigInt = 0x70000000L,
+                                mask: BigInt = 0xfffffL,
                                 beatBytes: Int = 32) extends Config((site, here, up) => {
   case BackingSbusScratchpadKey => Some(BackingSbusScratchpadParams(base, mask, beatBytes))
 })
